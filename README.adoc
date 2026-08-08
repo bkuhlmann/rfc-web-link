@@ -2,11 +2,27 @@
 :toclevels: 5
 :figure-caption!:
 
+:data_link: link:https://alchemists.io/articles/ruby_data[Data]
+:rfc_8288_link: link:https://www.rfc-editor.org/info/rfc8288[RFC 8288]
+
 = RFC Web Link
+
+RFC Web Link implements {rfc_8288_link}: Web Linking. This allows you to process links via the HTTP `link` header when processing HTTP responses. For example, the following demonstrates a HTTP link header which links to a previous and next article:
+
+----
+link: <https://demo.io/articles?page=1>; rel="previous"; title="Previous",
+      <https://demo.io/articles?page=3>; rel="next"; title="Next"
+----
+
+The above parses each line, delimited by a comma (`,`), and then each pair (attribute) in the line as delimited by a semicolon (`;`). This is not something you want to reinvent for each application you maintain so this gem handles the parsing (and creation) of HTTP `link` headers so you can stay focused on your own business logic.
 
 toc::[]
 
 == Features
+
+* Implements {rfc_8288_link}.
+* Parses web link headers into whole value objects for processing and/or inspection.
+* Allows explicit or implicit casting of whole value objects into a web links.
 
 == Requirements
 
@@ -45,6 +61,845 @@ require "rfc/web/link"
 ----
 
 == Usage
+
+The fastest way to get started is to create a new instance of the parser that you can reuse upon each HTTP request. Example:
+
+[source,ruby]
+----
+parser = RFC::Web::Link.new
+----
+
+Then you can use the `parser` instance to parse HTTP headers and build lists you can interact with:
+
+[source,ruby]
+----
+parser.call({"link" => "</articles>; rel=index"}, root_uri: "https://demo.io")
+----
+
+The above will yield the following set of links (in this case, only with a single link):
+
+[source,ruby]
+----
+#<data RFC::Web::Link::Models::List:0x00000900
+  links = [
+    #<data RFC::Web::Link::Models::Link:0x00000920
+      pairs = [                                                                                                                                                                                  #<data RFC::Web::Link::Models::Pair:0x00000940
+          delimiter = "=",
+          encoding = nil,
+          key = "rel",
+          language = nil,
+          value = "index"
+        >
+      ],
+      uri = "https://demo.io/articles"
+    >
+  ]
+>
+----
+
+As you can see, you get an immutable {data_link} whole value object for which you can directly access all attributes.
+
+=== Root URI
+
+A root URI (`root_uri`) must be supplied in order to resolve all relative URIs as absolute URIs. Generally, the `root_uri` is your host (i.e. primary domain).
+
+=== Delimiters
+
+When not used for delimiting link links and/or pairs (attributes), these need to in quotes when used as values for your attributes. Here's the breakdown:
+
+* *Semicolon* (`;`): Used to delimit each pair associated with a line.
+* *Comma* (`,`): Used to delimit each line of a link.
+
+=== Attributes
+
+There are _six_ {rfc_8288_link} registered target attributes: anchor, hreflang, media, rel, title, and type. The key map between the specification and this implementation's `RFC::Web::Link::Models::Pair` model is shown below:
+
+[options="header"]
+|===
+| Specification | Implementation
+| anchor        | anchor
+| hreflang      | language
+| media         | media
+| rel           | relation
+| title         | title
+| type          | type
+|===
+
+You can think of `language` as an alias to `hreflang` and `relation` as an alias to `rel` for improved readability. Both work but the later are preferred. Each attribute is described in further detail below.
+
+==== Anchor
+
+An anchor is optional but, when supplied, can be a single string, quoted with special characters, a relative URI, or an absolute URI. Here's a few examples:
+
+* *Fragment*: `#footer`
+* *Quoted (special characters)*: `"#overview,body,footer"`
+* *Relative URI*: `/policies`
+* *Absolute URI*: `https://demo.io/about`
+
+Relative URIs will automatically be expanded into an absolute URIs when parsed. This means if the `root_uri` is `https://demo.io` and the anchor's value is `/policies` (relative), then the resulting URI will be: `https://demo.io/polices`. Examples:
+
+*Fragment*
+
+[source,ruby]
+----
+list = RFC::Web::Link.new.call(
+  {"link" => "</articles>; anchor=#footer"},
+  root_uri: "https://demo.io"
+)
+
+# #<data RFC::Web::Link::Models::List:0x000016f0
+#   links = [
+#     #<data RFC::Web::Link::Models::Link:0x00001710
+#       pairs = [
+#         #<data RFC::Web::Link::Models::Pair:0x00001730
+#           delimiter = "=",
+#           encoding = nil,
+#           key = "anchor",
+#           language = nil,
+#           value = "#footer"
+#         >
+#       ],
+#       uri = "https://demo.io/articles"
+#     >
+#   ]
+>
+
+list.to_s
+
+# "<https://demo.io/articles>; anchor=#footer"
+----
+
+*Quoted*
+
+[source,ruby]
+----
+list = RFC::Web::Link.new.call(
+  {"link" => %(</articles>; anchor="#overview,body,footer")},
+  root_uri: "https://demo.io"
+)
+
+# #<data RFC::Web::Link::Models::List:0x00001660
+#   links = [
+#     #<data RFC::Web::Link::Models::Link:0x00001680
+#       pairs = [
+#         #<data RFC::Web::Link::Models::Pair:0x000016a0
+#           delimiter = "=",
+#           encoding = nil,
+#           key = "anchor",
+#           language = nil,
+#           value = "\"#overview,body,footer\""
+#         >
+#       ],
+#       uri = "https://demo.io/articles"
+#     >
+#   ]
+# >
+
+list.to_s
+
+# "<https://demo.io/articles>; anchor=\"#overview,body,footer\""
+----
+
+*Relative URI*
+
+[source,ruby]
+----
+list = RFC::Web::Link.new.call(
+  {"link" => "</articles>; anchor=/policies"},
+  root_uri: "https://demo.io"
+)
+
+# #<data RFC::Web::Link::Models::List:0x000017c0
+#   links = [
+#     #<data RFC::Web::Link::Models::Link:0x000017e0
+#       pairs = [
+#         #<data RFC::Web::Link::Models::Pair:0x00001800
+#           delimiter = "=",
+#           encoding = nil,
+#           key = "anchor",
+#           language = nil,
+#           value = "https://demo.io/policies"
+#         >
+#       ],
+#       uri = "https://demo.io/articles"
+#     >
+#   ]
+# >
+
+list.to_s
+
+# "<https://demo.io/articles>; anchor=https://demo.io/policies"
+----
+
+*Absolute URI*
+
+[source,ruby]
+----
+list = RFC::Web::Link.new.call(
+  {"link" => "</articles>; anchor=https://demo.io/about"},
+  root_uri: "https://demo.io"
+)
+
+# #<data RFC::Web::Link::Models::List:0x00001890
+#   links = [
+#     #<data RFC::Web::Link::Models::Link:0x000018b0
+#       pairs = [
+#         #<data RFC::Web::Link::Models::Pair:0x000018d0
+#           delimiter = "=",
+#           encoding = nil,
+#           key = "anchor",
+#           language = nil,
+#           value = "https://demo.io/about"
+#         >
+#       ],
+#       uri = "https://demo.io/articles"
+#     >
+#   ]
+# >
+
+list.to_s
+
+# "<https://demo.io/articles>; anchor=https://demo.io/about"
+----
+
+==== Language
+
+Language is optional but, when supplied, is a hint indicating the language of the associated link. This _does not_ override the value of the `content-language` header. Example:
+
+*Single*
+
+[source,ruby]
+----
+list = RFC::Web::Link.new.call(
+  {"link" => "</articles>; hreflang=en"},
+  root_uri: "https://demo.io"
+)
+
+# #<data RFC::Web::Link::Models::List:0x00000890
+#   links = [
+#     #<data RFC::Web::Link::Models::Link:0x000008b0
+#       pairs = [
+#         #<data RFC::Web::Link::Models::Pair:0x000008d0
+#           delimiter = "=",
+#           encoding = nil,
+#           key = "hreflang",
+#           language = nil,
+#           value = "en"
+#         >
+#       ],
+#       uri = "https://demo.io/articles"
+#     >
+#   ]
+# >
+
+list.to_s
+
+# "<https://demo.io/articles>; hreflang=en"
+----
+
+*Multiple*
+
+[source,ruby]
+----
+list = RFC::Web::Link.new.call(
+  {"link" => "</articles>; hreflang=en; hreflang=de"},
+  root_uri: "https://demo.io"
+)
+
+# #<data RFC::Web::Link::Models::List:0x000016c0
+#   links = [
+#     #<data RFC::Web::Link::Models::Link:0x000016e0
+#       pairs = [
+#         #<data RFC::Web::Link::Models::Pair:0x00001700
+#           delimiter = "=",
+#           encoding = nil,
+#           key = "hreflang",
+#           language = nil,
+#           value = "en"
+#         >,
+#         #<data RFC::Web::Link::Models::Pair:0x00001740
+#           delimiter = "=",
+#           encoding = nil,
+#           key = "hreflang",
+#           language = nil,
+#           value = "de"
+#         >
+#       ],
+#       uri = "https://demo.io/articles"
+#     >
+#   ]
+# >
+
+list.to_s
+
+# "<https://demo.io/articles>; hreflang=en; hreflang=de"
+----
+
+==== Media
+
+Media is optional but, when supplied, is a hint indicating the kind of media associated with the link. Example:
+
+[source,ruby]
+----
+list = RFC::Web::Link.new.call(
+  {"link" => "</articles>; media=print"},
+  root_uri: "https://demo.io"
+)
+
+# #<data RFC::Web::Link::Models::List:0x000017d0
+#   links = [
+#     #<data RFC::Web::Link::Models::Link:0x000017f0
+#       pairs = [
+#         #<data RFC::Web::Link::Models::Pair:0x00001810
+#           delimiter = "=",
+#           encoding = nil,
+#           key = "media",
+#           language = nil,
+#           value = "print"
+#         >
+#       ],
+#       uri = "https://demo.io/articles"
+#     >
+#   ]
+# >
+
+list.to_s
+
+# "<https://demo.io/articles>; media=print"
+----
+
+==== Relation
+
+A relation is the only attribute that is required by the specification and should be the first one defined. Example:
+
+*Single*
+
+[source,ruby]
+----
+list = RFC::Web::Link.new.call(
+  {"link" => "</articles>; relation=index"},
+  root_uri: "https://demo.io"
+)
+
+# #<data RFC::Web::Link::Models::List:0x00000890
+#   links = [
+#     #<data RFC::Web::Link::Models::Link:0x000008b0
+#       pairs = [
+#         #<data RFC::Web::Link::Models::Pair:0x000008d0
+#           delimiter = "=",
+#           encoding = nil,
+#           key = "relation",
+#           language = nil,
+#           value = "index"
+#         >
+#       ],
+#       uri = "https://demo.io/articles"
+#     >
+#   ]
+# >
+
+list.to_s
+
+# "<https://demo.io/articles>; rel=index"
+----
+
+*Shorthand*
+
+Short hand, for multiple relations, is supported as well. To use, each relation _must_ be delimited by a space within a single _quoted_ string. Example:
+
+[source,ruby]
+----
+list = RFC::Web::Link.new.call(
+  {"link" => %(</articles>; rel="one two three")},
+  root_uri: "https://demo.io"
+)
+
+# #<data RFC::Web::Link::Models::List:0x00000960
+#   links = [
+#     #<data RFC::Web::Link::Models::Link:0x00000980
+#       pairs = [
+#         #<data RFC::Web::Link::Models::Pair:0x000009a0
+#           delimiter = "=",
+#           encoding = nil,
+#           key = "rel",
+#           language = nil,
+#           value = "one"
+#         >
+#       ],
+#       uri = "https://demo.io/articles"
+#     >,
+#     #<data RFC::Web::Link::Models::Link:0x000009f0
+#       pairs = [
+#         #<data RFC::Web::Link::Models::Pair:0x00000a10
+#           delimiter = "=",
+#           encoding = nil,
+#           key = "rel",
+#           language = nil,
+#           value = "two"
+#         >
+#       ],
+#       uri = "https://demo.io/articles"
+#     >,
+#     #<data RFC::Web::Link::Models::Link:0x00000a60
+#       pairs = [
+#         #<data RFC::Web::Link::Models::Pair:0x00000a80
+#           delimiter = "=",
+#           encoding = nil,
+#           key = "rel",
+#           language = nil,
+#           value = "three"
+#         >
+#       ],
+#       uri = "https://demo.io/articles"
+#     >
+#   ]
+# >
+
+list.to_s
+
+# "<https://demo.io/articles>; rel=one, <https://demo.io/articles>; rel=two, <https://demo.io/articles>; rel=three"
+----
+
+Notice that the original relation short hand of `"one two three"` produced three unique links for each relation which allows you to type less while still producing three distinct links.
+
+==== Title
+
+A title is optional but, when supplied, allows you to provide a human readable label for the associated link. This includes being able to encode and decode the value based on the delimiter used. For example, notice the difference in delimiters used below:
+
+* *Plain* (`=`): `title=Demo` (example)
+* *Encoded* (`*=`): `+title*=UTF-8'en'd%C3%A9j%C3%A0%20vu+` (example)
+
+The title _must not_ appear more than once. If multiple occurrences are detected then only the first is honored. Also, if `=` and `+*=+` is used then `+*=+` takes precedence. Examples:
+
+*Without Encoding*
+
+[source,ruby]
+----
+list = RFC::Web::Link.new.call(
+  {"link" => "</articles>; title=Demo"},
+  root_uri: "https://demo.io"
+)
+
+# #<data RFC::Web::Link::Models::List:0x00000890
+#   links = [
+#     #<data RFC::Web::Link::Models::Link:0x000008b0
+#       pairs = [
+#         #<data RFC::Web::Link::Models::Pair:0x000008d0
+#           delimiter = "=",
+#           encoding = nil,
+#           key = "title",
+#           language = nil,
+#           value = "Demo"
+#         >
+#       ],
+#       uri = "https://demo.io/articles"
+#     >
+#   ]
+# >
+
+list.to_s
+
+# "<https://demo.io/articles>; title=Demo"
+----
+
+*With Encoding*
+
+[source,ruby]
+----
+list = RFC::Web::Link.new.call(
+  {"link" => "</articles>; title*=UTF-8'en'd%C3%A9j%C3%A0%20vu"},
+  root_uri: "https://demo.io"
+)
+
+# #<data RFC::Web::Link::Models::List:0x00000890
+#   links = [
+#     #<data RFC::Web::Link::Models::Link:0x000008b0
+#       pairs = [
+#         #<data RFC::Web::Link::Models::Pair:0x000008d0
+#           delimiter = "*=",
+#           encoding = "UTF-8",
+#           key = "title",
+#           language = "en",
+#           value = "déjà vu"
+#         >
+#       ],
+#       uri = "https://demo.io/articles"
+#     >
+#   ]
+# >
+
+list.to_s
+
+# "<https://demo.io/articles>; title*=UTF-8'en'd%C3%A9j%C3%A0%20vu"
+----
+
+==== Type
+
+Type is optional but, when supplied, is a hint indicating the MIME Type of the associated link. This _does not_ override the value of the `content-type` header. Example:
+
+[source,ruby]
+----
+list = RFC::Web::Link.new.call(
+  {"link" => "</articles>; type=text/html"},
+  root_uri: "https://demo.io"
+)
+
+# #<data RFC::Web::Link::Models::List:0x00000890
+#   links = [
+#     #<data RFC::Web::Link::Models::Link:0x000008b0
+#       pairs = [
+#         #<data RFC::Web::Link::Models::Pair:0x000008d0
+#           delimiter = "=",
+#           encoding = nil,
+#           key = "type",
+#           language = nil,
+#           value = "text/html"
+#         >
+#       ],
+#       uri = "https://demo.io/articles"
+#     >
+#   ]
+# >
+
+list.to_s
+
+# "<https://demo.io/articles>; type=text/html"
+----
+
+=== Extensions
+
+Extensions allow you to extend your implementation beyond the registered target attributes, described above, with your own custom attributes. For example, maybe you want to use the following attributes which are specific to your application: hint, errata, copyright. You can do this as follows:
+
+[source,ruby]
+----
+list = RFC::Web::Link.new.call(
+  {"link" => %(</articles>; hint="A demo."; errata="For demonstration only."; copyright=2025)},
+  root_uri: "https://demo.io"
+)
+
+# #<data RFC::Web::Link::Models::List:0x00000980
+#   links = [
+#     #<data RFC::Web::Link::Models::Link:0x000009a0
+#       pairs = [
+#         #<data RFC::Web::Link::Models::Pair:0x000009c0
+#           delimiter = "=",
+#           encoding = nil,
+#           key = "hint",
+#           language = nil,
+#           value = "\"A demo.\""
+#         >,
+#         #<data RFC::Web::Link::Models::Pair:0x00000a00
+#           delimiter = "=",
+#           encoding = nil,
+#           key = "errata",
+#           language = nil,
+#           value = "\"For demonstration only.\""
+#         >,
+#         #<data RFC::Web::Link::Models::Pair:0x00000a40
+#           delimiter = "=",
+#           encoding = nil,
+#           key = "copyright",
+#           language = nil,
+#           value = "2025"
+#         >
+#       ],
+#       uri = "https://demo.io/articles"
+#     >
+#   ]
+# >
+
+list.to_s
+
+# "<https://demo.io/articles>; hint=\"A demo.\"; errata=\"For demonstration only.\"; copyright=2025"
+----
+
+You can also encode your extensions by using the `+*=+` delimiter. Example:
+
+[source,ruby]
+----
+list = RFC::Web::Link.new.call(
+  {"link" => "</articles>; demo*=UTF-8'en'd%C3%A9j%C3%A0%20vu"},
+  root_uri: "https://demo.io"
+)
+
+# #<data RFC::Web::Link::Models::List:0x00000ad0
+#   links = [
+#     #<data RFC::Web::Link::Models::Link:0x00000af0
+#       pairs = [
+#         #<data RFC::Web::Link::Models::Pair:0x00000b10
+#           delimiter = "*=",
+#           encoding = "UTF-8",
+#           key = "demo",
+#           language = "en",
+#           value = "déjà vu"
+#         >
+#       ],
+#       uri = "https://demo.io/articles"
+#     >
+#   ]
+# >
+
+list.to_s
+
+# "<https://demo.io/articles>; demo*=UTF-8'en'd%C3%A9j%C3%A0%20vu"
+----
+
+=== Models
+
+You've already seen all of the models (whole value objects) used in the examples above but this section details what you can do with each model individually.
+
+==== List
+
+This model encapsulates the list of links parsed from an HTTP link header or created by you. A list can be created multiple ways:
+
+*All At Once*
+
+[source,ruby]
+----
+list = RFC::Web::Link::Models::List[
+  links: Set[
+    RFC::Web::Link::Models::Link[
+      uri: "https://demo.io",
+      pairs: Set[
+        RFC::Web::Link::Models::Pair[key: :title, value: "Demo"]
+      ]
+    ]
+  ]
+]
+----
+
+💡 Ensure you use a `Set` when adding your links and pairs.
+
+*Separately*
+
+[source,ruby]
+----
+pair = RFC::Web::Link::Models::Pair[key: :title, value: "Demo"]
+list = RFC::Web::Link::Models::Link[uri: "https://demo.io"].add(pair)
+list = RFC::Web::Link::Models::List.new.add(link)
+----
+
+Once you have a list, you can send the following messages (including {data_link} messages) along limited enumerable messages:
+
+[source,ruby]
+----
+list.add line
+list.all?
+list.any?
+list.clear
+list.each
+list.empty?
+list.find
+list.include? line
+list.map
+list.none?
+list.one?
+list.reject
+list.select
+list.size
+list.to_s
+list.to_str
+----
+
+You'll notice you can explicitly and implicitly cast your list to a string. This makes the following quite handy:
+
+[source,ruby]
+----
+"link: #{list}"
+# link: <https://demo.io>; title=Demo
+----
+
+==== Link
+
+This model encapsulates a single HTTP link header. A link can be created multiple ways:
+
+*All At Once*
+
+[source,ruby]
+----
+list = RFC::Web::Link::Models::Link[
+  uri: "https://demo.io",
+  pairs: Set[
+    RFC::Web::Link::Models::Pair[key: :title, value: "Demo"]
+  ]
+]
+----
+
+💡 Ensure you use a `Set` when adding your pairs.
+
+*Separately*
+
+[source,ruby]
+----
+pair = RFC::Web::Link::Models::Pair[key: :title, value: "Demo"]
+list = RFC::Web::Link::Models::Link[uri: "https://demo.io"].add(pair)
+----
+
+Once you have a link, you can then send the following messages (including {data_link} messages):
+
+[source,ruby]
+----
+link.empty?
+link.include? pair
+link.add pair
+link.append :relation, "index"
+link.append :title,
+            "déjà vu",
+            delimiter: "*=",
+            encoding: "UTF-8",
+            language: "en"
+link.has? :title
+link.has? "title"
+list.to_s
+list.to_str
+----
+
+You'll notice you can explicitly and implicitly cast your link to a string. This makes the following quite handy:
+
+[source,ruby]
+----
+"link: #{link}"
+# link: <https://demo.io>; title=Demo"
+----
+
+==== Pair
+
+This models encapsulates a single HTTP link header pair (i.e. key/value). A pair can be created as follows:
+
+*Basic*
+
+[source,ruby]
+----
+pair = RFC::Web::Link::Models::Pair[key: :title, value: "Demo"]
+
+# #<data RFC::Web::Link::Models::Pair:0x00001e90
+#   delimiter = "=",
+#   encoding = nil,
+#   key = "title",
+#   language = nil,
+#   value = "Demo"
+# >
+
+pair.encoded?  # false
+----
+
+*Encoded*
+
+[source,ruby]
+----
+pair = RFC::Web::Link::Models::Pair[
+  key: :title,
+  delimiter: "*=",
+  value: "Demo",
+  encoding: "UTF-8",
+  language: "en"
+]
+
+# #<data RFC::Web::Link::Models::Pair:0x00001ec0
+#   delimiter = "*=",
+#   encoding = "UTF-8",
+#   key = "title",
+#   language = "en",
+#   value = "Demo"
+# >
+
+pair.encoded?  # true
+----
+
+The key can be either a symbol or a string but is always stored as a string, internally. When using `=` as your delimiter (default), `+#encoded?+` will be `false` but when using `+*=+` as your delimiter, `+#encoded?+` will be `true`.
+
+As with `List` and `Link`, you have full access to all {data_link} messages and can explicitly and implicitly cast to a string. Example:
+
+[source,ruby]
+----
+"Pair: #{pair}"
+# Pair: title=Demo
+----
+
+=== Error Handling
+
+As per {rfc_8288_link}, this implementation is designed to safely ignore malformed web links. To illustrate, we'll start with an initialized parser and root URI:
+
+[source,ruby]
+----
+parser = RFC::Web::Link.new
+root_uri = "https://demo.io"
+----
+
+The following examples show the result of parsing different malformed URIs:
+
+*With Nil Value*
+
+[source,ruby]
+----
+parser.call({"link" => nil}, root_uri:)
+
+# #<data RFC::Web::Link::Models::List:0x00000880
+#   links = []
+# >
+----
+
+*With Empty Value*
+
+[source,ruby]
+----
+parser.call({"link" => ""}, root_uri:)
+
+# #<data RFC::Web::Link::Models::List:0x00000880
+#   links = []
+# >
+----
+
+*With No Leading Less Than Sign For URI*
+
+[source,ruby]
+----
+parser.call({"link" => "/articles; rel=index"}, root_uri:)
+
+# #<data RFC::Web::Link::Models::List:0x00000880
+#   links = []
+# >
+----
+
+*Without Attributes*
+
+[source,ruby]
+----
+parser.call({"link" => "</articles>"}, root_uri:)
+
+# #<data RFC::Web::Link::Models::List:0x00000880
+#   links = [
+#     #<data RFC::Web::Link::Models::Link:0x000008b0
+#       pairs = [],
+#       uri = "https://demo.io/articles"
+#     >
+#   ]
+# >
+----
+
+*With Missing Attribute Value*
+
+[source,ruby]
+----
+parser.call({"link" => "</articles>; rel"}, root_uri:)
+
+# #<data RFC::Web::Link::Models::List:0x000008a0
+#   links = [
+#     #<data RFC::Web::Link::Models::Link:0x00000910
+#       pairs = [
+#         #<data RFC::Web::Link::Models::Pair:0x00000930
+#           delimiter = nil,
+#           encoding = nil,
+#           key = "rel",
+#           language = nil,
+#           value = nil
+#         >
+#       ],
+#       uri = "https://demo.io/articles"
+#     >
+#   ]
+# >
+----
 
 == Development
 
