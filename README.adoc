@@ -46,6 +46,175 @@ require "rfc/web/link"
 
 == Usage
 
+=== Questions
+
+* Section 3.2: I need to resolve a relative URI into a full URI?
+
+=== Relation Types
+
+There are two kinds of relation types: registered and extension.
+
+=== Attributes
+
+The following attributes are allowed per link:
+
+* `anchor` (optional): If multiples are provide, only use the first occurance.
+* `hreflang` (optional): Can appear multiple times. Must be a valid Language-Tag. This is a hint only and must not ovrride the `content-language` header.
+* `media` (optiona): Must not appear more than once.
+* `rel` (requried): Can contain multiple relation types separated by spaces. Must not appear more than once.
+* `title` (optional): Must not appear more than once. This applies for internationalization as well.
+* `type` (optional): Must be a type/subtype format and not appear more than once.
+
+An attribute value can be quoted or unquoted. The following are valid:
+
+* `anchor=#demo`
+* `anchor="#demo"`
+
+All values must be quoted if using a semicolon or comma.
+
+When serialiing the above, the original quotes don't need to be preserved except when special characers are used (i.e. `; , <whitespace>`).
+
+==== Categories
+
+All attributes can be broken down into two categories:
+
+* *Link Parameters*: `rel` and `anchor`.
+* *Target Attributes*: `hreflang`, `media`, `title`, `title*`, and `type`.
+
+==== Relations
+
+Multiple relation types in one rel → multiple links sharing everything else:
+
+Link: </foo>; rel="next prefetch"
+This is two links:
+
+context → /foo with rel="next"
+context → /foo with rel="prefetch"
+They share the same context, same target, and same target attributes. It's a shorthand, not a single link with a compound relation type.
+
+With attributes too:
+
+Link: <https://api.example.com/data>; rel="alternate http://example.org/rel/mirror"; type="application/json"
+This produces two links, both with type="application/json":
+
+context → https://api.example.com/data with rel="alternate"
+context → https://api.example.com/data with rel="http://example.org/rel/mirror"
+The ABNF relation-type *( 1*SP relation-type ) means one or more space-separated relation types (at least one space between each). Tabs or other whitespace are not valid separators — only SP (space, 0x20).
+
+Registered vs. extension relation types
+The ABNF defines two forms:
+
+relation-type  = reg-rel-type / ext-rel-type
+reg-rel-type   = LOALPHA *( LOALPHA / DIGIT / "." / "-" )
+ext-rel-type   = URI
+Registered relation types (reg-rel-type)
+These are short, lowercase tokens from the IANA Link Relation Type Registry. The ABNF constrains them to: lowercase letters, digits, dots, and hyphens, starting with a lowercase letter.
+
+Link: </next.html>; rel="next"
+Link: </style.css>; rel="stylesheet"
+Link: </author.vcf>; rel="author"
+Link: </help>; rel="help"
+Link: </copyright>; rel="copyright"
+Link: </me>; rel="me"
+No quoting needed:
+
+Link: </next.html>; rel=next
+Also valid — next is a valid token so quotes are optional.
+
+Extension relation types (ext-rel-type)
+When there's no registered relation type that fits, you use a URI as the relation type. This is the extensibility mechanism — anyone can mint their own without registration.
+
+Link: </jobs>; rel="http://example.org/rel/job-listing"
+Link: </reviews>; rel="https://schema.org/review"
+Link: </metadata>; rel="http://api.example.com/rels/metadata"
+
+*Extension types MUST be absolute URIs*
+
+
+Extension URIs with special characters MUST be quoted
+Because the Link header uses ; (to separate parameters) and , (to separate link-values) as delimiters, any relation type URI containing those characters must be quoted:
+
+Plaintext
+
+
+
+Link: </foo>; rel="http://example.org/rel/foo;bar"
+✅ Quoted — the ; inside the quotes is part of the URI, not a parameter delimiter.
+
+Plaintext
+
+
+
+Link: </foo>; rel=http://example.org/rel/foo;bar
+❌ Unquoted — the parser sees rel=http://example.org/rel/foo and then tries to parse bar as a new parameter, which fails (or produces wrong results).
+
+Same with commas:
+
+Plaintext
+
+
+
+Link: </foo>; rel="http://example.org/rel/foo,bar"
+✅ Quoted — the , is part of the URI.
+
+Plaintext
+
+
+
+Link: </foo>; rel=http://example.org/rel/foo,bar
+❌ Unquoted — the parser treats , as a link-value separator, splitting this into two malformed link-values.
+
+In practice, many extension URIs don't contain ; or ,, so they can be unquoted and still work:
+
+Plaintext
+
+
+
+Link: </foo>; rel=http://example.org/rel/custom
+✅ Technically valid (no special characters, so no ambiguity) — but quoting is safer and more conventional for URIs.
+
+Quick reference table
+Rule  Example Notes
+rel required  </foo>; rel="next"  Missing rel → invalid link
+rel once only </foo>; rel="next"; rel="prev"  Second ignored, first kept
+Multiple types  </foo>; rel="next prefetch" Two links, shared context/target/attrs
+Registered type rel=next  Token, no quotes needed
+Extension type (URI)  rel="http://example.org/rel/x"  Must be absolute URI
+Extension with ;  rel="http://example.org/rel/x;y"  MUST quote
+Extension with ,  rel="http://example.org/rel/x,y"  MUST quote
+
+==== Types
+
+The "type" attribute, when present, is a hint indicating what the media type of the result of dereferencing the link should be.  Note that this is only a hint; for example, it does not override the Content-Type header field of a HTTP response obtained by actually
+
+==== Extensions TODO
+
+Other link-params are link-extensions and are to be considered as target attributes.
+
+Such target attributes MAY be defined to use the encoding in [RFC8187] (e.g., "example" and "example*").  When both forms are present, they SHOULD be considered to be the same target attribute; applications SHOULD use the value of the name ending in "*" (after [RFC8187] decoding) but MAY fall back to the other value if there is an error in decoding it, or if they do not support decoding.
+
+=== Validations
+
+* The names of target attributes SHOULD conform to the token rule, but SHOULD NOT include any of the characters "%", "'", or "*", for portability across serialisations and MUST be compared in a case-insensitive fashion.
+
+=== Resolution
+
+When parsing a Link, the parser must resolve relative URIs as full URIs. Example:
+
+----
+Link: </bar>; rel="next",
+      </baz>; rel="related"; anchor="#appendix",
+      </qux>; rel="cite"; anchor="https://other.example/doc"
+----
+
+The above then becomes:
+
+----
+https://example.com/bar (next)
+https://example.com/foo#appendix (related)
+https://other.example/doc (cite)
+----
+
 == Development
 
 To contribute, run:
