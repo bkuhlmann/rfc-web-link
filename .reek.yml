@@ -3,6 +3,12 @@ exclude_paths:
   - vendor
 
 detectors:
+  DuplicateMethodCall:
+    exclude:
+      - RFC::Web::Link::Parsers::Line#process
+  FeatureEnvy:
+    exclude:
+      - RFC::Web::Link::Parsers::Line#process
   LongParameterList:
     enabled: false
   TooManyStatements:
