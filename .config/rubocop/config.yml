@@ -3,4 +3,5 @@ inherit_gem:
 
 Metrics/ParameterLists:
   Exclude:
+    - lib/rfc/web/link/models/link.rb
     - lib/rfc/web/link/models/pair.rb

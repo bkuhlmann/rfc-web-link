@@ -2,6 +2,7 @@
 
 require "rfc/web/link/decoder"
 require "rfc/web/link/encoder"
+require "rfc/web/link/models/link"
 require "rfc/web/link/models/pair"
 
 module RFC
