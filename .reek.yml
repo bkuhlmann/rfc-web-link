@@ -11,6 +11,10 @@ detectors:
       - RFC::Web::Link::Parsers::Line#process
   LongParameterList:
     enabled: false
+  TooManyInstanceVariables:
+    exclude:
+      - RFC::Web::Link::Parsers::List
   TooManyStatements:
     exclude:
+      - RFC::Web::Link::Parsers::List#initialize
       - RFC::Web::Link::Parsers::Pair#call

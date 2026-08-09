@@ -6,6 +6,7 @@ require "rfc/web/link/models/link"
 require "rfc/web/link/models/list"
 require "rfc/web/link/models/pair"
 require "rfc/web/link/parsers/line"
+require "rfc/web/link/parsers/list"
 require "rfc/web/link/parsers/pair"
 
 module RFC
