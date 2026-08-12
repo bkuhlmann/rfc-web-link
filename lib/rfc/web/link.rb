@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "rfc/web/link/decoder"
 require "rfc/web/link/models/link"
 require "rfc/web/link/models/value"
 
