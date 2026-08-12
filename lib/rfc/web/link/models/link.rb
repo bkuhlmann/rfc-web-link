@@ -13,7 +13,7 @@ module RFC
           type: "type"
         }.freeze
 
-        # Models a link record.
+        # Models a link.
         Link = Data.define(:uri, *KEY_MAP.keys) do
           def initialize uri:,
                          relation:,
