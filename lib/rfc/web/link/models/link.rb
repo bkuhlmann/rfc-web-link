@@ -14,26 +14,35 @@ module RFC
         }.freeze
 
         # Models a link.
-        Link = Data.define(:uri, *KEY_MAP.keys) do
+        Link = Data.define(:uri, *KEY_MAP.keys, :extensions) do
           def initialize uri:,
                          relation:,
                          anchor: nil,
                          language: nil,
                          media: nil,
                          title: nil,
-                         type: nil
+                         type: nil,
+                         extensions: {}
             super
           end
 
-          # :reek:FeatureEnvy
-          def to_s key_map: KEY_MAP
-            attributes = to_h.compact
-            uri = attributes.delete :uri
-            all = attributes.transform_keys!(key_map)
-                            .map { |key, value| "#{key}=#{value}" }
-                            .join "; "
+          def add_extension name, value
+            extensions[name] = value
+            self
+          end
 
-            "<#{uri}>; #{all}"
+          def extension?(name) = extensions.key? name
+
+          def to_h
+            {uri:, anchor:, language:, media:, relation:, title:, type:, **extensions}.compact
+          end
+
+          def to_s key_map: KEY_MAP
+            attributes = to_h.except(:uri).transform_keys!(key_map)
+                             .map { |key, value| "#{key}=#{value}" }
+                             .join "; "
+
+            "<#{uri}>; #{attributes}"
           end
         end
       end
