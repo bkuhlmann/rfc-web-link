@@ -5,3 +5,6 @@ Metrics/ParameterLists:
   Exclude:
     - lib/rfc/web/link/models/link.rb
     - lib/rfc/web/link/models/pair.rb
+Style/AccessModifierDeclarations:
+  Exclude:
+    - lib/rfc/web/link/models/list.rb
