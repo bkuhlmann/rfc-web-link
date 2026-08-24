@@ -65,7 +65,7 @@ module RFC
             buffer << %("#{scanner.pre_match[start..]}")
           end
 
-          # rubocop:todo Metrics/AbcSize
+          # rubocop:todo-next Metrics/AbcSize
           def maybe_split_by_relation text, root_uri:
             match = text.match relation_pattern
 
@@ -77,7 +77,6 @@ module RFC
                  .split
                  .each { list.add line.call(text.sub(relation_pattern, "rel=#{it}"), root_uri:) }
           end
-          # rubocop:enable Metrics/AbcSize
         end
       end
     end
