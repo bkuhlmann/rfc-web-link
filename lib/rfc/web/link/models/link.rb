@@ -26,6 +26,8 @@ module RFC
             self
           end
 
+          def find_pair(**attributes) = pairs.find { it in attributes }
+
           def has?(key) = pairs.any? { it.key == key.to_s }
 
           def to_s(delimiter: "; ") = "<#{uri}>; #{pairs.join delimiter}"
