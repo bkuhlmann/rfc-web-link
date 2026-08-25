@@ -26,6 +26,12 @@ module RFC
             self
           end
 
+          def find_pair **attributes
+            pairs.find do |pair|
+              attributes.all? { |key, value| pair.public_send(key).match? value }
+            end
+          end
+
           def has?(key) = pairs.any? { it.key == key.to_s }
 
           def to_s(delimiter: "; ") = "<#{uri}>; #{pairs.join delimiter}"

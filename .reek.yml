@@ -11,6 +11,9 @@ detectors:
       - RFC::Web::Link::Parsers::Line#process
   LongParameterList:
     enabled: false
+  NestedIterators:
+    exclude:
+      - RFC::Web::Link::Models::Link#find_pair
   TooManyInstanceVariables:
     exclude:
       - RFC::Web::Link::Parsers::List

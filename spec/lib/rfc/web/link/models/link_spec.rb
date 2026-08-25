@@ -53,6 +53,28 @@ RSpec.describe RFC::Web::Link::Models::Link do
     end
   end
 
+  describe "#find_pair" do
+    let(:title) { RFC::Web::Link::Models::Pair[key: :title, value: "Test"] }
+
+    before { model.add(pair).add title }
+
+    it "answers pair by single attribute" do
+      expect(model.find_pair(key: "title")).to eq(title)
+    end
+
+    it "answers pair by single attribute (regular expression)" do
+      expect(model.find_pair(value: /est/)).to eq(title)
+    end
+
+    it "answers pair by multiple attributes" do
+      expect(model.find_pair(key: "title", delimiter: "=", value: "Test")).to eq(title)
+    end
+
+    it "answers nil when not found" do
+      expect(model.find_pair(key: "bogus")).to be(nil)
+    end
+  end
+
   describe "#has?" do
     subject(:model) { described_class[uri: "https://test.io", pairs: Set[pair]] }
 
