@@ -6,8 +6,8 @@ module RFC
       module Parsers
         # Parses a header line into a link record.
         class Line
-          def initialize delimiter: /;\s*?/, pair: Pair.new, model: Models::Link
-            @delimiter = delimiter
+          def initialize patterns: PATTERNS, pair: Pair.new, model: Models::Link
+            @patterns = patterns
             @pair = pair
             @model = model
           end
@@ -21,7 +21,9 @@ module RFC
 
           private
 
-          attr_reader :delimiter, :pair, :model
+          attr_reader :patterns, :pair, :model
+
+          def instance_variables_to_inspect = %i[@pair @model]
 
           def process parts,
                       root_uri,
@@ -43,9 +45,17 @@ module RFC
           end
 
           def build_uri value, root_uri:
-            value.delete_prefix("<")
-                 .delete_suffix(">")
-                 .then { it.start_with?("/") ? "#{root_uri}#{it}" : it }
+            value.match(uri_pattern)[:value].then do |uri|
+              uri.start_with?("/") ? "#{root_uri}#{uri}" : uri
+            end
+          end
+
+          def uri_pattern
+            @uri_pattern ||= patterns.fetch :uri
+          end
+
+          def delimiter
+            @delimiter ||= patterns.fetch :line_delimiter
           end
         end
       end

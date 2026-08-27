@@ -122,4 +122,12 @@ RSpec.describe RFC::Web::Link::Parsers::List do
       expect(parser.call("", root_uri:)).to eq(RFC::Web::Link::Models::List.new)
     end
   end
+
+  describe "#inspect" do
+    it "answers allowed instance variabled" do
+      expect(parser.inspect).to match(
+        /@line=.+RFC::Web::Link::Parsers::Line.+@list=.+RFC::Web::Link::Models::List/
+      )
+    end
+  end
 end

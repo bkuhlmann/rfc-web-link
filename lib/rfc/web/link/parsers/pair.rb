@@ -6,16 +6,14 @@ module RFC
       module Parsers
         # Parses a header key/value pair into a record.
         class Pair
-          def initialize split_pattern: /(?<target>=)|(?<extended>\*=)/,
-                         decoder: Decoder.new,
-                         model: Models::Pair
-            @split_pattern = split_pattern
+          def initialize patterns: PATTERNS, decoder: Decoder.new, model: Models::Pair
+            @patterns = patterns
             @decoder = decoder
             @model = model
           end
 
           def call text, root_uri:
-            key, delimiter, value = text.split split_pattern
+            key, delimiter, value = text.split delimiter_pattern
             key.strip!
 
             attributes = decoder.call value
@@ -28,7 +26,13 @@ module RFC
 
           private
 
-          attr_reader :split_pattern, :decoder, :model
+          attr_reader :patterns, :decoder, :model
+
+          def instance_variables_to_inspect = %i[@decoder @model]
+
+          def delimiter_pattern
+            @delimiter_pattern ||= patterns.fetch :pair_delimiter
+          end
         end
       end
     end

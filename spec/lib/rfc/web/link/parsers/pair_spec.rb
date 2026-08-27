@@ -92,4 +92,12 @@ RSpec.describe RFC::Web::Link::Parsers::Pair do
       )
     end
   end
+
+  describe "#inspect" do
+    it "answers allowed instance variables" do
+      expect(parser.inspect).to match(
+        /@decoder=.+RFC::Web::Link::Decoder.+@model=RFC::Web::Link::Models::Pair/
+      )
+    end
+  end
 end

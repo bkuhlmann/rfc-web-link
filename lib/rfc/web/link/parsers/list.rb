@@ -8,37 +8,31 @@ module RFC
       module Parsers
         # Parses header links into a list of records.
         class List
-          RELATION_PATTERN = /
-            (?<prefix>rel=")  # Prefix.
-            .+                # One or more characters.
-            \s+?              # One or more spaces, lazy.
-            .+                # One or more characters.
-            (?<suffix>")      # Suffix.
-          /x
-
-          def initialize relation_pattern: RELATION_PATTERN, line: Line.new, list: Models::List.new
-            @scanner = StringScanner.new ""
-            @relation_pattern = relation_pattern
+          def initialize patterns: PATTERNS, line: Line.new, list: Models::List.new
+            @patterns = patterns
             @line = line
             @list = list
+            @scanner = StringScanner.new ""
             @comma = ","
             @quote = %(")
           end
 
           def call text, root_uri:
-            text = String text
+            match = String(text).match uri_pattern
             list.clear
 
-            return list unless text.start_with? "<"
+            return list unless match
 
-            scanner.string = text
+            scanner.string = match.string
 
             build_list root_uri
           end
 
           private
 
-          attr_reader :scanner, :relation_pattern, :line, :list, :comma, :quote
+          attr_reader :patterns, :line, :list, :scanner, :comma, :quote
+
+          def instance_variables_to_inspect = %i[@line @list]
 
           def build_list root_uri, buffer: +"", lines: []
             check scanner.getch, buffer, lines until scanner.eos?
@@ -65,17 +59,22 @@ module RFC
             buffer << %("#{scanner.pre_match[start..]}")
           end
 
-          # rubocop:todo-next Metrics/AbcSize
           def maybe_split_by_relation text, root_uri:
             match = text.match relation_pattern
 
             return list.add line.call(text, root_uri:) unless match
 
-            match.to_s
-                 .delete_prefix(match[:prefix])
-                 .delete_suffix(match[:suffix])
-                 .split
-                 .each { list.add line.call(text.sub(relation_pattern, "rel=#{it}"), root_uri:) }
+            match[:value].split.each do |value|
+              list.add line.call(text.sub(relation_pattern, "rel=#{value}"), root_uri:)
+            end
+          end
+
+          def uri_pattern
+            @uri_pattern ||= patterns.fetch :uri
+          end
+
+          def relation_pattern
+            @relation_pattern ||= patterns.fetch :relation
           end
         end
       end
