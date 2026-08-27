@@ -5,7 +5,7 @@ require "spec_helper"
 RSpec.describe RFC::Web::Link::Models::Link do
   subject(:model) { described_class[uri: "https://test.io"] }
 
-  let(:pair) { RFC::Web::Link::Models::Pair[key: :relation, value: "index"] }
+  let(:pair) { RFC::Web::Link::Models::Pair[key: :rel, value: "index"] }
 
   describe "#empty?" do
     it "answers true when empty" do
@@ -42,12 +42,12 @@ RSpec.describe RFC::Web::Link::Models::Link do
 
   describe "#append" do
     it "adds pair" do
-      model.append :relation, "index"
+      model.append :rel, "index"
       expect(model.pairs).to eq(Set[pair])
     end
 
     it "answers itself" do
-      expect(model.append(:relation, "index")).to eq(
+      expect(model.append(:rel, "index")).to eq(
         described_class[uri: "https://test.io", pairs: Set[pair]]
       )
     end
@@ -101,9 +101,9 @@ RSpec.describe RFC::Web::Link::Models::Link do
         uri: "https://test.io",
         pairs: Set[
           RFC::Web::Link::Models::Pair[key: :anchor, value: "#test"],
-          RFC::Web::Link::Models::Pair[key: :language, value: "en"],
+          RFC::Web::Link::Models::Pair[key: :hreflang, value: "en"],
           RFC::Web::Link::Models::Pair[key: :media, value: "print"],
-          RFC::Web::Link::Models::Pair[key: :relation, value: "index"],
+          RFC::Web::Link::Models::Pair[key: :rel, value: "index"],
           RFC::Web::Link::Models::Pair[key: :title, value: "Test"],
           RFC::Web::Link::Models::Pair[key: :type, value: "text/plain"]
         ]

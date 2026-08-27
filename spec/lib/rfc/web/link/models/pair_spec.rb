@@ -26,16 +26,6 @@ RSpec.describe RFC::Web::Link::Models::Pair do
   end
 
   shared_examples "a string" do |method|
-    it "answers transformed relation key" do
-      model = described_class[key: :relation, value: "test"]
-      expect(model.public_send(method)).to eq("rel=test")
-    end
-
-    it "answers transformed language key" do
-      model = described_class[key: :language, value: "en"]
-      expect(model.public_send(method)).to eq("hreflang=en")
-    end
-
     it "answers plain text without special characters" do
       expect(model.public_send(method)).to eq("title=test")
     end

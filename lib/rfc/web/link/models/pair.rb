@@ -12,15 +12,12 @@ module RFC
 
           def encoded? = delimiter == "*="
 
-          def to_s key_map: {"relation" => "rel", "language" => "hreflang"}.freeze,
-                   encoder: Encoder.new
-            transformed_key = key_map.fetch(key) { it }
-
+          def to_s encoder: Encoder.new
             if encoding
-              "#{transformed_key}#{delimiter}#{encoding}'#{language}'" \
+              "#{key}#{delimiter}#{encoding}'#{language}'" \
               "#{encoder.call value.encode(encoding)}"
             else
-              "#{transformed_key}#{delimiter}#{value}"
+              "#{key}#{delimiter}#{value}"
             end
           end
 
