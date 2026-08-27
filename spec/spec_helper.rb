@@ -9,6 +9,8 @@ require "rfc/web/link"
 
 SPEC_ROOT = Pathname(__dir__).realpath.freeze
 
+Dir[File.join("#{SPEC_ROOT}/support/shared_examples/**/*.rb")].each { |path| require path }
+
 RSpec.configure do |config|
   config.color = true
   config.disable_monkey_patching!
