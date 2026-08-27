@@ -44,7 +44,7 @@ RSpec.describe RFC::Web::Link::Parsers::List do
           links: Set[
             RFC::Web::Link::Models::Link[
               uri: "https://test.io/articles",
-              pairs: Set[RFC::Web::Link::Models::Pair[key: :anchor, value: %("#one,two,three")]]
+              pairs: Set[RFC::Web::Link::Models::Pair[key: :anchor, value: "#one,two,three"]]
             ]
           ]
         ]

@@ -26,8 +26,12 @@ RSpec.describe RFC::Web::Link::Decoder do
       expect(decoder.call("UTF-8'en'\xFF\xFF")).to eq(value: nil, encoding: nil, language: nil)
     end
 
+    it "answers hash with value for quoted text" do
+      expect(decoder.call(%("test"))).to eq(value: "test", encoding: nil, language: nil)
+    end
+
     it "answers hash with value for plain text" do
-      expect(decoder.call("basic")).to eq(value: "basic", encoding: nil, language: nil)
+      expect(decoder.call("test")).to eq(value: "test", encoding: nil, language: nil)
     end
 
     it "answers hash with nils for nil text" do

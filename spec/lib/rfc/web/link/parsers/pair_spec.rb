@@ -32,27 +32,15 @@ RSpec.describe RFC::Web::Link::Parsers::Pair do
       )
     end
 
-    it "answers relation (plain)" do
+    it "answers relation" do
       expect(parser.call("rel=index", root_uri:)).to eq(
         RFC::Web::Link::Models::Pair[key: :rel, value: "index"]
       )
     end
 
-    it "answers relation (quoted)" do
-      expect(parser.call(%(rel="index start"), root_uri:)).to eq(
-        RFC::Web::Link::Models::Pair[key: :rel, value: %("index start")]
-      )
-    end
-
-    it "answers title (plain)" do
+    it "answers title" do
       expect(parser.call("title=Test", root_uri:)).to eq(
         RFC::Web::Link::Models::Pair[key: :title, value: "Test"]
-      )
-    end
-
-    it "answers title (quoted)" do
-      expect(parser.call(%(title="A Test"), root_uri:)).to eq(
-        RFC::Web::Link::Models::Pair[key: :title, value: %("A Test")]
       )
     end
 

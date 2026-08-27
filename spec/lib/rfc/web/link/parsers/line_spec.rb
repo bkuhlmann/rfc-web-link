@@ -86,20 +86,11 @@ RSpec.describe RFC::Web::Link::Parsers::Line do
       )
     end
 
-    it "answers record with relation (plain)" do
+    it "answers record with relation" do
       expect(parser.call("</test>; rel=index", root_uri:)).to eq(
         RFC::Web::Link::Models::Link[
           uri: "https://test.io/test",
           pairs: Set[RFC::Web::Link::Models::Pair[key: :rel, value: "index"]]
-        ]
-      )
-    end
-
-    it "answers record with relation (quoted)" do
-      expect(parser.call(%(</test>; rel="index"), root_uri:)).to eq(
-        RFC::Web::Link::Models::Link[
-          uri: "https://test.io/test",
-          pairs: Set[RFC::Web::Link::Models::Pair[key: :rel, value: %("index")]]
         ]
       )
     end
@@ -118,15 +109,6 @@ RSpec.describe RFC::Web::Link::Parsers::Line do
         RFC::Web::Link::Models::Link[
           uri: "https://test.io/test",
           pairs: Set[RFC::Web::Link::Models::Pair[key: :title, value: "test"]]
-        ]
-      )
-    end
-
-    it "answers record with quoted title" do
-      expect(parser.call(%(</test>; title="A test"), root_uri:)).to eq(
-        RFC::Web::Link::Models::Link[
-          uri: "https://test.io/test",
-          pairs: Set[RFC::Web::Link::Models::Pair[key: :title, value: %("A test")]]
         ]
       )
     end
