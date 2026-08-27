@@ -32,7 +32,11 @@ module RFC
             end
           end
 
-          def has?(key) = pairs.any? { it.key == key.to_s }
+          def pair? **attributes
+            pairs.any? do |pair|
+              attributes.all? { |key, value| pair.public_send(key).match? value }
+            end
+          end
 
           def to_s(delimiter: "; ") = "<#{uri}>; #{pairs.join delimiter}"
 

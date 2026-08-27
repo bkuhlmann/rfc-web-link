@@ -75,19 +75,23 @@ RSpec.describe RFC::Web::Link::Models::Link do
     end
   end
 
-  describe "#has?" do
+  describe "#pair?" do
     subject(:model) { described_class[uri: "https://test.io", pairs: Set[pair]] }
 
-    it "answers true when extension exists (string)" do
-      expect(model.has?("relation")).to be(true)
+    it "answers true when matched by single attribute (string)" do
+      expect(model.pair?(key: "rel")).to be(true)
     end
 
-    it "answers true when extension exists (symbol)" do
-      expect(model.has?(:relation)).to be(true)
+    it "answers true when matched by single attribute (regular expression)" do
+      expect(model.pair?(value: /in/)).to be(true)
     end
 
-    it "answers false when extension doesn't exist" do
-      expect(model.has?(:bogus)).to be(false)
+    it "answers true when matched by multiple attributes" do
+      expect(model.pair?(key: "rel", delimiter: "=", value: "index")).to be(true)
+    end
+
+    it "answers false when pair can't be matched" do
+      expect(model.pair?(key: "bogus")).to be(false)
     end
   end
 
