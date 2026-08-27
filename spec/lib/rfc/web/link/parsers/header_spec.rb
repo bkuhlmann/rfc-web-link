@@ -3,15 +3,13 @@
 require "spec_helper"
 
 RSpec.describe RFC::Web::Link::Parsers::Header do
-  subject(:parser) { described_class.new }
+  subject(:parser) { described_class.new "https://test.io" }
 
   describe "#call" do
-    let(:root_uri) { "https://test.io" }
-
     it "answers record for lowercase key" do
       headers = {"link" => "</articles>; rel=index"}
 
-      expect(parser.call(headers, root_uri:)).to eq(
+      expect(parser.call(headers)).to eq(
         RFC::Web::Link::Models::List[
           links: Set[
             RFC::Web::Link::Models::Link[
@@ -26,7 +24,7 @@ RSpec.describe RFC::Web::Link::Parsers::Header do
     it "answers record for uppercase key" do
       headers = {"Link" => "</articles>; rel=index"}
 
-      expect(parser.call(headers, root_uri:)).to eq(
+      expect(parser.call(headers)).to eq(
         RFC::Web::Link::Models::List[
           links: Set[
             RFC::Web::Link::Models::Link[
@@ -38,10 +36,10 @@ RSpec.describe RFC::Web::Link::Parsers::Header do
       )
     end
 
-    it "answers records" do
+    it "answers multiple records" do
       headers = {"Link" => "</articles?page=1>; rel=previous, </articles?page=3>; rel=next"}
 
-      expect(parser.call(headers, root_uri:)).to eq(
+      expect(parser.call(headers)).to eq(
         RFC::Web::Link::Models::List[
           links: Set[
             RFC::Web::Link::Models::Link[
@@ -57,10 +55,23 @@ RSpec.describe RFC::Web::Link::Parsers::Header do
       )
     end
 
-    it "answers empty array when header isn't found" do
-      expect(parser.call({content_type: "text/html"}, root_uri:)).to eq(
-        RFC::Web::Link::Models::List.new
+    it "overrides root URI when supplied" do
+      headers = {"link" => "</articles>; rel=index"}
+
+      expect(parser.call(headers, root_uri: "https://alt.io")).to eq(
+        RFC::Web::Link::Models::List[
+          links: Set[
+            RFC::Web::Link::Models::Link[
+              uri: "https://alt.io/articles",
+              pairs: Set[RFC::Web::Link::Models::Pair[key: :rel, value: "index"]]
+            ]
+          ]
+        ]
       )
+    end
+
+    it "answers empty array when header isn't found" do
+      expect(parser.call({content_type: "text/html"})).to eq(RFC::Web::Link::Models::List.new)
     end
   end
 end

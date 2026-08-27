@@ -3,6 +3,9 @@ exclude_paths:
   - vendor
 
 detectors:
+  ControlParameter:
+    exclude:
+      - RFC::Web::Link::Parsers::Header#call
   DuplicateMethodCall:
     exclude:
       - RFC::Web::Link::Parsers::Line#process

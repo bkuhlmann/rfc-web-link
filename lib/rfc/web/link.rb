@@ -14,7 +14,7 @@ module RFC
   module Web
     # Main namespace.
     module Link
-      def self.new(**) = Parsers::Header.new(**)
+      def self.new(*, **) = Parsers::Header.new(*, **)
     end
   end
 end

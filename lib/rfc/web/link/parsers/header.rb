@@ -6,19 +6,20 @@ module RFC
       module Parsers
         # Parses a header link into a list of records.
         class Header
-          def initialize pattern: /link/i, list: List.new
+          def initialize root_uri = nil, pattern: /link/i, list: List.new
+            @root_uri = root_uri
             @pattern = pattern
             @list = list
           end
 
-          def call headers, root_uri:
+          def call headers, root_uri: nil
             text = headers.find { |key, value| break value if key.match? pattern }
-            list.call text, root_uri:
+            list.call text, root_uri: root_uri || self.root_uri
           end
 
           private
 
-          attr_reader :pattern, :list
+          attr_reader :root_uri, :pattern, :list
         end
       end
     end
