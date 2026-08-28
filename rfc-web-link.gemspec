@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |spec|
   spec.name = "rfc-web-link"
-  spec.version = "0.0.0"
+  spec.version = "0.1.0"
   spec.authors = ["Brooke Kuhlmann"]
   spec.email = ["brooke@alchemists.io"]
   spec.homepage = "https://alchemists.io/projects/rfc-web-link"
