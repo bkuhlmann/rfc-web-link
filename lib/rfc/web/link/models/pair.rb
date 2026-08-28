@@ -17,7 +17,7 @@ module RFC
               "#{key}#{delimiter}#{encoding}'#{language}'" \
               "#{encoder.call value.encode(encoding)}"
             else
-              "#{key}#{delimiter}#{value}"
+              "#{key}#{delimiter}#{encoder.call value, key:}"
             end
           end
 

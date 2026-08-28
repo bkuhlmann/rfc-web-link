@@ -26,11 +26,7 @@ RSpec.describe RFC::Web::Link::Models::Pair do
   end
 
   shared_examples "a string" do |method|
-    it "answers plain text without special characters" do
-      expect(model.public_send(method)).to eq("title=test")
-    end
-
-    it "answers encoding, language, and text when present" do
+    it "answers encoding, language, and encoded text when present" do
       model = described_class[
         key: :title,
         delimiter: "*=",
@@ -51,6 +47,15 @@ RSpec.describe RFC::Web::Link::Models::Pair do
       ]
 
       expect(model.public_send(method)).to eq("title*=UTF-8''%C2%A3%20and%20%E2%82%AC%20rates")
+    end
+
+    it "answers plain text without special characters" do
+      expect(model.public_send(method)).to eq("title=test")
+    end
+
+    it "ignores type values" do
+      model = described_class[key: :type, value: "text/plain"]
+      expect(model.public_send(method)).to eq("type=text/plain")
     end
   end
 

@@ -6,9 +6,23 @@ RSpec.describe RFC::Web::Link::Encoder do
   subject(:encoder) { described_class.new }
 
   describe "#call" do
-    it "answers original test when not encodable" do
-      text = "test"
-      expect(encoder.call(text)).to equal(text)
+    it "answers non-strings as strings" do
+      value = 123
+      expect(encoder.call(value)).to eq("123")
+    end
+
+    it "answers original text when not encodable" do
+      value = "test"
+      expect(encoder.call(value)).to equal(value)
+    end
+
+    it "answers original text when given type key" do
+      value = "text/plain"
+      expect(encoder.call(value, key: "type")).to equal(value)
+    end
+
+    it "answers quoted text when characters are allowed but includes spaces" do
+      expect(encoder.call("test with spaces")).to eq(%("test with spaces"))
     end
 
     it "answers numbers" do
@@ -35,8 +49,20 @@ RSpec.describe RFC::Web::Link::Encoder do
       expect(encoder.call("$")).to eq("$")
     end
 
+    it "answers percent" do
+      expect(encoder.call("%")).to eq("%")
+    end
+
     it "answers ampersand" do
       expect(encoder.call("&")).to eq("&")
+    end
+
+    it "answers apostrophe" do
+      expect(encoder.call("'")).to eq("'")
+    end
+
+    it "answers star" do
+      expect(encoder.call("*")).to eq("*")
     end
 
     it "answers plus" do
@@ -71,12 +97,10 @@ RSpec.describe RFC::Web::Link::Encoder do
       expect(encoder.call("~")).to eq("~")
     end
 
-    it "answers encoded umlaut" do
-      expect(encoder.call("letztes Käpitel")).to eq("letztes%20K%C3%A4pitel")
-    end
-
     it "answers encoded special characters" do
-      expect(encoder.call("£ and € rates")).to eq("%C2%A3%20and%20%E2%82%AC%20rates")
+      expect(encoder.call("Déjà vu with £ and € rates")).to eq(
+        "D%C3%A9j%C3%A0%20vu%20with%20%C2%A3%20and%20%E2%82%AC%20rates"
+      )
     end
   end
 end
