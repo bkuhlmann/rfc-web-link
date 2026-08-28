@@ -9,8 +9,9 @@ module RFC
         # Models a list of links.
         List = Data.define :links do
           extend Forwardable
+          include Enumerable
 
-          delegate %i[all? any? empty? find include? map none? one? size] => :links
+          delegate %i[empty? size] => :links
 
           def initialize links: Set.new
             super
@@ -26,11 +27,11 @@ module RFC
             self
           end
 
-          def each(&block) = block ? links.each(&block) : self
+          def each
+            return enum_for :each unless block_given?
 
-          def reject(&) = with links: Set[*links.reject(&)]
-
-          def select(&) = with links: Set[*links.select(&)]
+            links.each { yield it }
+          end
 
           def to_s(delimiter: ", ") = links.join delimiter
 
