@@ -25,3 +25,5 @@ detectors:
     exclude:
       - RFC::Web::Link::Parsers::List#initialize
       - RFC::Web::Link::Parsers::Pair#call
+  UnusedParameters:
+    enabled: false
